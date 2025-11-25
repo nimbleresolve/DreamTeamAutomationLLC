@@ -489,9 +489,16 @@ section {
 
 /* Service cards grid */
 .services-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 2rem;
+}
+
+.services-grid .card {
+    flex: 0 1 calc(33.333% - 1.5rem);
+    min-width: 280px;
+    max-width: 400px;
 }
 
 /* ===== FORMS ===== */
