@@ -206,7 +206,7 @@
                         <button onclick="resetCamera(scene1, camera1, controls1)">Reset View</button>
                         <button onclick="toggleWireframe(mesh1)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls1)">Auto Rotate</button>
-                        <button onclick="launchARForModel(scene1, mesh1)" class="ar-btn">🔮 AR View</button>
+                        <button onclick="launchARWithFile('assets/models/gear.glb')" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -223,7 +223,7 @@
                         <button onclick="resetCamera(scene2, camera2, controls2)">Reset View</button>
                         <button onclick="toggleWireframe(mesh2)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls2)">Auto Rotate</button>
-                        <button onclick="launchARForModel(scene2, mesh2)" class="ar-btn">🔮 AR View</button>
+                        <button onclick="launchARWithFile('assets/models/bracket.glb')" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -240,7 +240,7 @@
                         <button onclick="resetCamera(scene3, camera3, controls3)">Reset View</button>
                         <button onclick="toggleWireframe(mesh3)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls3)">Auto Rotate</button>
-                        <button onclick="launchARForModel(scene3, mesh3)" class="ar-btn">🔮 AR View</button>
+                        <button onclick="launchARWithFile('assets/models/fitting.glb')" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -299,14 +299,13 @@
             <model-viewer 
                 id="ar-model-viewer"
                 ar 
-                ar-modes="scene-viewer webxr quick-look"
+                ar-modes="webxr scene-viewer quick-look"
                 ar-scale="auto"
                 camera-controls 
                 touch-action="pan-y"
                 auto-rotate
                 shadow-intensity="1"
                 exposure="1"
-                environment-image="neutral"
                 style="width: 100%; height: 500px; background: linear-gradient(135deg, #0a0d12 0%, #151a24 100%); border-radius: 8px;"
             >
                 <button slot="ar-button" id="ar-activate-btn" style="
@@ -335,6 +334,22 @@
             <p id="ar-instructions" style="text-align: center; color: var(--text-muted); margin-top: 1rem; font-size: 0.9rem;">
                 On iPhone: Opens in AR Quick Look | On Android: Opens in Scene Viewer
             </p>
+            
+            <!-- Alternative: Direct download link for iOS -->
+            <div id="ios-ar-fallback" style="display: none; text-align: center; margin-top: 1.5rem; padding: 1.5rem; background: var(--bg-tertiary); border-radius: 8px; border: 1px dashed var(--accent-blue);">
+                <p style="color: var(--text-primary); margin-bottom: 1rem;">📱 <strong>iPhone/iPad Users:</strong></p>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">For the best AR experience, download the 3D file and open it:</p>
+                <a id="ios-download-link" href="#" download="model.glb" style="
+                    display: inline-block;
+                    background: linear-gradient(135deg, #00d4ff 0%, #4a9eff 100%);
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: 600;
+                ">📥 Download 3D Model</a>
+                <p style="color: var(--text-muted); margin-top: 0.75rem; font-size: 0.8rem;">Then tap the file to view in AR</p>
+            </div>
         </div>
         
         <!-- QR Code for mobile AR -->
@@ -573,11 +588,74 @@
             controls.autoRotate = !controls.autoRotate;
         }
         
-        // Launch AR for demo models
+        // Detect iOS
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+        
+        // Launch AR with a pre-made GLB file (works on iOS!)
+        function launchARWithFile(glbPath) {
+            const arViewerContainer = document.getElementById('ar-viewer-container');
+            const modelViewer = document.getElementById('ar-model-viewer');
+            const iosFallback = document.getElementById('ios-ar-fallback');
+            const iosDownloadLink = document.getElementById('ios-download-link');
+            
+            // Show the AR section
+            arViewerContainer.style.display = 'block';
+            document.getElementById('ar-section').style.display = 'block';
+            
+            // Set the model source to the GLB file
+            modelViewer.src = glbPath;
+            iosDownloadLink.href = glbPath;
+            
+            // Scroll to AR viewer
+            arViewerContainer.scrollIntoView({ behavior: 'smooth' });
+            
+            // Update instructions
+            document.getElementById('ar-instructions').innerHTML = 
+                '⏳ Loading 3D model...';
+            document.getElementById('ar-instructions').style.color = 'var(--text-muted)';
+            
+            // Listen for load
+            modelViewer.addEventListener('load', () => {
+                console.log('GLB loaded, checking AR support...');
+                
+                // Small delay to let model-viewer detect AR
+                setTimeout(() => {
+                    if (modelViewer.canActivateAR) {
+                        document.getElementById('ar-instructions').innerHTML = 
+                            '✅ AR Ready! Tap the button above to view in your space.';
+                        document.getElementById('ar-instructions').style.color = '#10b981';
+                        iosFallback.style.display = 'none';
+                    } else if (isIOS()) {
+                        document.getElementById('ar-instructions').innerHTML = 
+                            '📱 Tap "View in Your Space" to open in AR Quick Look';
+                        document.getElementById('ar-instructions').style.color = '#f59e0b';
+                        iosFallback.style.display = 'block';
+                    } else {
+                        document.getElementById('ar-instructions').innerHTML = 
+                            '📱 Open on mobile for AR. Rotate the 3D model here with your mouse.';
+                        document.getElementById('ar-instructions').style.color = 'var(--text-muted)';
+                    }
+                }, 500);
+            }, { once: true });
+            
+            modelViewer.addEventListener('error', (e) => {
+                console.error('Error loading model:', e);
+                document.getElementById('ar-instructions').innerHTML = 
+                    '⚠️ Error loading model. Try refreshing.';
+                document.getElementById('ar-instructions').style.color = '#ef4444';
+            }, { once: true });
+        }
+        
+        // Launch AR for demo models (fallback for custom uploads)
         function launchARForModel(scene, mesh) {
             // Show loading state
             const arViewerContainer = document.getElementById('ar-viewer-container');
             const modelViewer = document.getElementById('ar-model-viewer');
+            const iosFallback = document.getElementById('ios-ar-fallback');
+            const iosDownloadLink = document.getElementById('ios-download-link');
             
             arViewerContainer.style.display = 'block';
             document.getElementById('ar-section').style.display = 'block';
@@ -617,16 +695,28 @@
                     // Set the model source
                     modelViewer.src = url;
                     
+                    // Setup iOS download fallback
+                    iosDownloadLink.href = url;
+                    
                     // Listen for when model is loaded
                     modelViewer.addEventListener('load', () => {
                         console.log('Model loaded, AR ready');
+                        
+                        // Check if on iOS - show download option
+                        if (isIOS()) {
+                            iosFallback.style.display = 'block';
+                            document.getElementById('ar-instructions').innerHTML = 
+                                '📱 <strong>iPhone detected!</strong> Tap "View in Your Space" or download the file below.';
+                            document.getElementById('ar-instructions').style.color = '#f59e0b';
+                        }
                         
                         // Check AR support
                         if (modelViewer.canActivateAR) {
                             document.getElementById('ar-instructions').innerHTML = 
                                 '✅ AR is supported! Tap the button above to view in your space.';
                             document.getElementById('ar-instructions').style.color = '#10b981';
-                        } else {
+                            iosFallback.style.display = 'none';
+                        } else if (!isIOS()) {
                             document.getElementById('ar-instructions').innerHTML = 
                                 '📱 Open this page on your phone to use AR. You can still rotate the 3D model here.';
                         }
