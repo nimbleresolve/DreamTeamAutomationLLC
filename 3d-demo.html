@@ -84,6 +84,17 @@
             color: var(--text-primary);
         }
         
+        .model-controls .ar-btn {
+            background: linear-gradient(135deg, #00d4ff 0%, #4a9eff 100%);
+            border-color: #00d4ff;
+            color: white;
+        }
+        
+        .model-controls .ar-btn:hover {
+            background: linear-gradient(135deg, #00e5ff 0%, #5aafff 100%);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+        
         .loading-spinner {
             position: absolute;
             top: 50%;
@@ -195,6 +206,7 @@
                         <button onclick="resetCamera(scene1, camera1, controls1)">Reset View</button>
                         <button onclick="toggleWireframe(mesh1)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls1)">Auto Rotate</button>
+                        <button onclick="launchARForModel(scene1, mesh1)" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -211,6 +223,7 @@
                         <button onclick="resetCamera(scene2, camera2, controls2)">Reset View</button>
                         <button onclick="toggleWireframe(mesh2)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls2)">Auto Rotate</button>
+                        <button onclick="launchARForModel(scene2, mesh2)" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -227,6 +240,7 @@
                         <button onclick="resetCamera(scene3, camera3, controls3)">Reset View</button>
                         <button onclick="toggleWireframe(mesh3)">Wireframe</button>
                         <button onclick="toggleAutoRotate(controls3)">Auto Rotate</button>
+                        <button onclick="launchARForModel(scene3, mesh3)" class="ar-btn">🔮 AR View</button>
                     </div>
                 </div>
             </div>
@@ -542,6 +556,54 @@
         
         function toggleAutoRotate(controls) {
             controls.autoRotate = !controls.autoRotate;
+        }
+        
+        // Launch AR for demo models
+        function launchARForModel(scene, mesh) {
+            const exporter = new THREE.GLTFExporter();
+            
+            // Create a clean scene for export
+            const exportScene = new THREE.Scene();
+            const exportMesh = mesh.clone();
+            exportMesh.position.set(0, 0, 0);
+            exportScene.add(exportMesh);
+            
+            // Add light for better AR appearance
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(1, 1, 1);
+            exportScene.add(light);
+            exportScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            
+            exporter.parse(
+                exportScene,
+                (glb) => {
+                    const blob = new Blob([glb], { type: 'model/gltf-binary' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Setup and show AR viewer
+                    const modelViewer = document.getElementById('ar-model-viewer');
+                    const arViewerContainer = document.getElementById('ar-viewer-container');
+                    
+                    modelViewer.src = url;
+                    arViewerContainer.style.display = 'block';
+                    document.getElementById('ar-section').style.display = 'block';
+                    
+                    // Scroll to AR viewer
+                    arViewerContainer.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Try to activate AR
+                    setTimeout(() => {
+                        if (modelViewer.canActivateAR) {
+                            modelViewer.activateAR();
+                        }
+                    }, 500);
+                },
+                (error) => {
+                    console.error('GLB export error:', error);
+                    alert('AR export failed. Try on a mobile device for best results.');
+                },
+                { binary: true }
+            );
         }
         
         // File upload handling
